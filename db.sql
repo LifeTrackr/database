@@ -22,7 +22,7 @@ CREATE TABLE "Event" (
 	"frequency" interval(1) NOT NULL,
 	"last_trigger" timestamp(1) with time zone NOT NULL,
 	"action" varchar(10) NOT NULL,
-	"companion_ID" integer NOT NULL,
+	"companion_id" integer NOT NULL,
 	"username_id" varchar(10) NOT NULL,
 	CONSTRAINT "Event_pk" PRIMARY KEY ("event_id")
 ) WITH (
