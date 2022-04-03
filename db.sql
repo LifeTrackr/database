@@ -47,6 +47,28 @@ ALTER TABLE "Companion" ADD CONSTRAINT "Companion_fk0" FOREIGN KEY ("username_id
 ALTER TABLE "Event" ADD CONSTRAINT "Event_fk0" FOREIGN KEY ("companion_ID") REFERENCES "Companion"("companion");
 ALTER TABLE "Event" ADD CONSTRAINT "Event_fk1" FOREIGN KEY ("username_id") REFERENCES "User"("username");
 
+CREATE OR REPLACE FUNCTION update_next_trigger()
+  RETURNS TRIGGER
+  LANGUAGE PLPGSQL
+  AS
+$$
+BEGIN
+	IF NEW.frequency <> OLD.frequency THEN
+	    UPDATE "Event"
+	        set next_trigger = frequency + now() where OLD.event_id = NEW.event_id;
+	    UPDATE "Event"
+	        set last_trigger = now() where OLD.event_id = NEW.event_id;
+	END IF;
+	RETURN NEW;
+END;
+$$;
+DROP TRIGGER last_name_changes ON "Event";
+CREATE TRIGGER last_name_changes
+  AFTER UPDATE
+  ON "Event"
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_next_trigger();
+
 
 
 
