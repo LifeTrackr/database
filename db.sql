@@ -59,9 +59,11 @@ BEGIN
 END;
 $$;
 
-CREATE TRIGGER last_name_changes
+CREATE TRIGGER update_triggers
   AFTER UPDATE
   ON "Event"
   FOR EACH ROW
   EXECUTE PROCEDURE update_next_trigger();
+  
+  
 
