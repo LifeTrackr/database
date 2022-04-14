@@ -1,3 +1,6 @@
+CREATE EXTENSION if not exists citext;
+CREATE DOMAIN email AS citext
+  CHECK ( value ~ '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$' );
 create table if not exists "User"
 (
   user_id         serial,
@@ -9,11 +12,18 @@ create table if not exists "User"
   unique (username)
 );
 
+CREATE TABLE companion_types (
+    id SERIAL PRIMARY KEY NOT NULL,
+    companion TEXT
+);
+INSERT INTO companion_types (companion) VALUES
+    ('dog'), ('cat'), ('reptile'), ('plant'), ('bird');
+
 create table if not exists "Companion"
 (
   companion      serial,
   "name"         varchar(10)  not null UNIQUE,
-  companion_type varchar(10)  not null,
+  companion_type INTEGER REFERENCES companion_types (id),
   notes          varchar(255) not null,
   image          varchar(255) UNIQUE,
   user_id        serial,
@@ -55,7 +65,31 @@ create table if not exists "Event"
   constraint "Event_fk3" foreign key (image) references "Companion"(image)
     on delete cascade
 );
+create function update_next_trigger() returns trigger
+    language plpgsql
+as
+$$
+BEGIN
+	IF NEW.frequency != OLD.frequency or NEW.update != FALSE THEN
+	    UPDATE "Event" set next_trigger = frequency + now(), last_trigger = now(), update = false
+	        where true;
+	END if;
+	RETURN NEW;
+END;
+$$;
 
+create function event_completed_log() returns trigger
+    language plpgsql
+as
+$$
+BEGIN
+	IF NEW.update != FALSE THEN
+	    INSERT INTO "Event_Logs"("event_id", "user_id", "completed_at")
+           VALUES (NEW.event_id, NEW.user_id, now());
+	END if;
+	RETURN NEW;
+END;
+$$;
 create trigger update_triggers
   after update
   on "Event"
@@ -85,20 +119,5 @@ create table if not exists "Event_Logs"
   constraint "Event_Logs_fk1"
     foreign key (user_id) references "User"
 );
-
-create function update_next_trigger() returns trigger
-    language plpgsql
-as
-$$
-BEGIN
-	IF NEW.frequency != OLD.frequency or NEW.update != FALSE THEN
-	    UPDATE "Event" set next_trigger = frequency + now(), last_trigger = now(), update = false
-	        where true;
-	END if;
-	RETURN NEW;
-END;
-$$;
-
-alter function update_next_trigger() owner to mibsksytckvbvy;
 
 
