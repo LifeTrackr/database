@@ -3,16 +3,14 @@ CREATE EXTENSION citext;
 CREATE DOMAIN email AS citext
   CHECK ( value ~ '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$' );
 
-
 create table if not exists "User"
 (
-  user_id         serial
-    constraint "User_pk"
-      primary key,
-  username        email                not null
-    unique,
-  hashed_password varchar(64)          not null,
-  is_active       boolean default true not null
+  user_id serial constraint "User_pk" primary key,
+  username email not null unique,
+  first_name varchar(15) not null,
+  last_name varchar(25),
+  hashed_password varchar(64) not null,
+  is_active boolean default true not null
 );
 
 create table if not exists "Event_Logs"
