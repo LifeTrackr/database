@@ -1,147 +1,111 @@
-
 CREATE EXTENSION citext;
-CREATE DOMAIN email AS citext
-  CHECK ( value ~ '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$' );
 
-create table if not exists "User"
-(
-  user_id serial constraint "User_pk" primary key,
-  username email not null unique,
-  first_name varchar(15) not null,
-  last_name varchar(25),
-  hashed_password varchar(64) not null,
-  is_active boolean default true not null
+CREATE DOMAIN email AS citext CHECK (value ~ '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$');
+
+CREATE TABLE IF NOT EXISTS "User" (
+    user_id serial CONSTRAINT "User_pk" PRIMARY KEY,
+    username email NOT NULL UNIQUE,
+    first_name varchar(15) NOT NULL,
+    last_name varchar(25),
+    hashed_password varchar(64) NOT NULL,
+    is_active boolean DEFAULT TRUE NOT NULL
 );
 
-create table if not exists "Event_Logs"
-(
-  id           serial
-    constraint "Event_Logs_pk"
-      primary key,
-  event_id     serial,
-  user_id      serial
-    constraint "Event_Logs_fk1"
-      references "User",
-  completed_at timestamp(1) with time zone not null
+CREATE TABLE IF NOT EXISTS "Event_Logs" (
+    id serial CONSTRAINT "Event_Logs_pk" PRIMARY KEY,
+    event_id serial,
+    user_id serial CONSTRAINT "Event_Logs_fk1" REFERENCES "User",
+    completed_at timestamp(1) WITH time zone NOT NULL
 );
 
-create table if not exists companion_types
-(
-  id        serial
-    primary key,
-  companion text
-);
-INSERT INTO companion_types (companion) VALUES
-    ('dog'), ('cat'), ('reptile'), ('plant'), ('bird');
-
-create table if not exists "Companion"
-(
-  companion      serial
-    constraint "Companion_pk"
-      primary key,
-  name           varchar(10)  not null
-    unique,
-  companion_type integer
-    references companion_types,
-  notes          varchar(255) not null,
-  image          varchar(255)
-    unique,
-  user_id        serial
-    constraint "Companion_fk0"
-      references "User"
-      on delete cascade
+CREATE TABLE IF NOT EXISTS companion_types (
+    id serial PRIMARY KEY,
+    companion text
 );
 
-create table if not exists "Event"
-(
-  event_id     serial
-    constraint "Event_pk"
-      primary key,
-  name         varchar(10)           not null,
-  qr_code      integer               not null,
-  notes        varchar(255)          not null,
-  priority     varchar(1)            not null,
-  frequency    interval(1)           not null,
-  last_trigger timestamp(1) with time zone,
-  next_trigger timestamp(1) with time zone,
-  action       varchar(10)           not null,
-  companion_id serial
-    constraint "Event_fk1"
-      references "Companion"
-      on delete cascade,
-  user_id      serial
-    constraint "Event_fk0"
-      references "User"
-      on delete cascade,
-  update       boolean default false not null
+INSERT INTO companion_types (companion)
+    VALUES ('dog'), ('cat'), ('reptile'), ('plant'), ('bird');
+
+CREATE TABLE IF NOT EXISTS "Companion" (
+    companion serial CONSTRAINT "Companion_pk" PRIMARY KEY,
+    name varchar(10) NOT NULL,
+    companion_type integer REFERENCES companion_types,
+    notes varchar(255) NOT NULL,
+    image varchar(255) UNIQUE,
+    user_id serial CONSTRAINT "Companion_fk0" REFERENCES "User" ON DELETE CASCADE
 );
 
-create table if not exists "QR_Range"
-(
-  id             serial
-    primary key,
-  assigned_range integer not null,
-  user_id        serial
-    constraint "QR_Range_fk0"
-      references "User"
-      on delete cascade
+CREATE TABLE IF NOT EXISTS "Event" (
+    event_id serial CONSTRAINT "Event_pk" PRIMARY KEY,
+    name varchar(10) NOT NULL,
+    qr_code integer NOT NULL,
+    notes varchar(255) NOT NULL,
+    priority varchar(1) NOT NULL,
+    frequency interval(1) NOT NULL,
+    last_trigger timestamp(1) WITH time zone,
+    next_trigger timestamp(1) WITH time zone,
+    action varchar(10) NOT NULL,
+    companion_id serial CONSTRAINT "Event_fk1" REFERENCES "Companion" ON DELETE CASCADE,
+    user_id serial CONSTRAINT "Event_fk0" REFERENCES "User" ON DELETE CASCADE,
+    UPDATE boolean DEFAULT FALSE NOT NULL
 );
 
-create table if not exists "QR_Codes"
-(
-  id       serial
-    primary key,
-  value    integer not null,
-  qr_id    serial
-    constraint "QR_Codes_fk0"
-      references "QR_Range"
-      on delete cascade,
-  event_id serial
-    constraint "QR_Codes_fk1"
-      references "Event"
-      on delete cascade
+CREATE TABLE IF NOT EXISTS "QR_Range" (
+    id serial PRIMARY KEY,
+    assigned_range integer NOT NULL,
+    user_id serial CONSTRAINT "QR_Range_fk0" REFERENCES "User" ON DELETE CASCADE
 );
 
-create function update_next_trigger() returns trigger
-  language plpgsql
-as
-$$
+CREATE TABLE IF NOT EXISTS "QR_Codes" (
+    id serial PRIMARY KEY,
+    value integer NOT NULL,
+    qr_id serial CONSTRAINT "QR_Codes_fk0" REFERENCES "QR_Range" ON DELETE CASCADE,
+    event_id serial CONSTRAINT "QR_Codes_fk1" REFERENCES "Event" ON DELETE CASCADE
+);
+
+CREATE FUNCTION update_next_trigger ()
+    RETURNS TRIGGER
+    LANGUAGE plpgsql
+    AS $$
 BEGIN
-	IF NEW.update != FALSE THEN
-	    UPDATE "Event" set next_trigger = frequency + now(), last_trigger = now(), update = false
-	        where update = True;
-	END if;
-	RETURN NEW;
+    IF NEW.update != FALSE THEN
+        UPDATE
+            "Event"
+        SET
+            next_trigger = frequency + now(),
+            last_trigger = now(),
+            UPDATE
+                = FALSE
+            WHERE
+                UPDATE
+                    = TRUE;
+    END IF;
+    RETURN NEW;
 END;
 $$;
 
-
-create function event_completed_log() returns trigger
-    language plpgsql
-as
-$$
+CREATE FUNCTION event_completed_log ()
+    RETURNS TRIGGER
+    LANGUAGE plpgsql
+    AS $$
 BEGIN
-	IF NEW.update != FALSE THEN
-	    INSERT INTO "Event_Logs"("event_id", "user_id", "completed_at")
-           VALUES (NEW.event_id, NEW.user_id, now());
-	END if;
-	RETURN NEW;
+    IF NEW.update != FALSE THEN
+        INSERT INTO "Event_Logs" ("event_id", "user_id", "completed_at")
+            VALUES (NEW.event_id, NEW.user_id, now());
+    END IF;
+    RETURN NEW;
 END;
 $$;
-create trigger update_triggers
-  after update
-  on "Event"
-  for each row
-execute procedure update_next_trigger();
 
-create trigger create_trigger
-  after insert
-  on "Event"
-  for each row
-execute procedure update_next_trigger();
+CREATE TRIGGER update_triggers
+    AFTER UPDATE ON "Event" FOR EACH ROW
+    EXECUTE PROCEDURE update_next_trigger ();
 
-create trigger event_completed_log
-  before update
-  on "Event"
-  for each row
-execute procedure event_completed_log();
+CREATE TRIGGER create_trigger
+    AFTER INSERT ON "Event" FOR EACH ROW
+    EXECUTE PROCEDURE update_next_trigger ();
+
+CREATE TRIGGER event_completed_log
+    BEFORE UPDATE ON "Event" FOR EACH ROW
+    EXECUTE PROCEDURE event_completed_log ();
+
