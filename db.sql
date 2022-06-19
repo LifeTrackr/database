@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS "Event_Logs" (
     completed_at timestamp(1) WITH time zone NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS companion_types (
+CREATE TABLE IF NOT EXISTS Companion_Types (
     id serial PRIMARY KEY,
     companion text
 );
