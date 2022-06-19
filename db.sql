@@ -29,7 +29,7 @@ INSERT INTO companion_types (companion)
 CREATE TABLE IF NOT EXISTS "Companion" (
     companion serial CONSTRAINT "Companion_pk" PRIMARY KEY,
     name varchar(10) NOT NULL,
-    companion_type integer REFERENCES companion_types,
+    companion_type integer REFERENCES Companion_Types(id),
     notes varchar(255) NOT NULL,
     image varchar(255) UNIQUE,
     user_id serial CONSTRAINT "Companion_fk0" REFERENCES "User" ON DELETE CASCADE
