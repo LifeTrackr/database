@@ -18,18 +18,18 @@ CREATE TABLE IF NOT EXISTS "Event_Logs" (
     completed_at timestamp(1) WITH time zone NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS Companion_Types (
+CREATE TABLE IF NOT EXISTS "Companion_Types" (
     id serial PRIMARY KEY,
     type_name text NOT NULL
 );
 
-INSERT INTO companion_types (companion)
+INSERT INTO "Companion_Types" (type_name)
     VALUES ('dog'), ('cat'), ('reptile'), ('plant'), ('bird');
 
 CREATE TABLE IF NOT EXISTS "Companion" (
     companion serial CONSTRAINT "Companion_pk" PRIMARY KEY,
     name varchar(10) NOT NULL,
-    companion_type integer REFERENCES Companion_Types(id),
+    companion_type integer REFERENCES "Companion_Types"(id),
     notes varchar(255) NOT NULL,
     image varchar(255) UNIQUE,
     user_id serial CONSTRAINT "Companion_fk0" REFERENCES "User" ON DELETE CASCADE
