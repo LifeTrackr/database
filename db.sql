@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS "Event_Logs" (
 
 CREATE TABLE IF NOT EXISTS Companion_Types (
     id serial PRIMARY KEY,
-    companion text
+    type_name text NOT NULL
 );
 
 INSERT INTO companion_types (companion)
